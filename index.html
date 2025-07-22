@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Diagnostic Re-FAP</title>
+  <style>
+    body { font-family: Arial, sans-serif; background-color: #f4f4f4; margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; }
+    #chat { flex: 1; padding: 1rem; overflow-y: auto; background: #fff; }
+    .message { max-width: 80%; padding: 0.7rem 1rem; margin: 0.5rem; border-radius: 12px; line-height: 1.4; }
+    .user { background-color: #e0f7fa; align-self: flex-end; }
+    .bot { background-color: #e8f5e9; align-self: flex-start; }
+    #input-area { display: flex; padding: 1rem; background: #ddd; }
+    #user-input { flex: 1; padding: 0.5rem; font-size: 1rem; }
+    #send-btn { padding: 0.5rem 1rem; font-size: 1rem; margin-left: 0.5rem; }
+  </style>
+</head>
+<body>
+  <div id="chat"></div>
+  <div id="input-area">
+    <input type="text" id="user-input" placeholder="Décrivez votre problème moteur..." />
+    <button id="send-btn">Envoyer</button>
+  </div>
+  <script>
+    const chat = document.getElementById('chat');
+    const input = document.getElementById('user-input');
+    const sendBtn = document.getElementById('send-btn');
+
+    function addMessage(text, className) {
+      const div = document.createElement('div');
+      div.className = `message ${className}`;
+      div.textContent = text;
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    async function sendMessage() {
+      const userText = input.value.trim();
+      if (!userText) return;
+      addMessage(userText, 'user');
+      input.value = '';
+      addMessage('🔧 Analyse en cours...', 'bot');
+
+      try {
+        const response = await fetch('/api/message', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: userText })
+        });
+        const data = await response.json();
+        document.querySelectorAll('.bot').at(-1).textContent = data.reply;
+      } catch (err) {
+        document.querySelectorAll('.bot').at(-1).textContent = "❌ Erreur de réponse. Réessaie plus tard.";
+      }
+    }
+
+    sendBtn.addEventListener('click', sendMessage);
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') sendMessage();
+    });
+  </script>
+</body>
+</html>
