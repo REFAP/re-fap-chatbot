@@ -1,56 +1,48 @@
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Méthode non autorisée' });
+    return res.status(405).json({ message: 'Méthode non autorisée' });
   }
 
   const { message } = req.body;
 
-  if (!message || message.trim() === '') {
-    return res.status(400).json({ error: 'Message vide' });
-  }
-
-  const apiKey = process.env.OPENAI_API_KEY;
-
-  if (!apiKey) {
-    return res.status(500).json({ error: 'Clé API OpenAI manquante' });
+  if (!message) {
+    return res.status(400).json({ message: 'Aucun message reçu' });
   }
 
   try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
       headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "gpt-4",
+        model: 'gpt-4',
         messages: [
           {
-            role: "system",
-            content: `Tu es un expert automobile Re-FAP. Ton rôle est d'aider l'utilisateur à identifier l'origine probable d'un voyant moteur ou d’un problème moteur. Pose des questions si besoin, propose une hypothèse simple, et oriente vers un garage partenaire si nécessaire.`,
+            role: 'system',
+            content: `Tu es un expert automobile Re-FAP, avec un ton direct, pro, chaleureux et accessible. Tu poses des questions précises pour affiner ton diagnostic, comme un bon mécano de confiance. Ta mission est d’aider les automobilistes à identifier la panne probable en fonction des symptômes décrits, et de les orienter si besoin vers un diagnostic FAP ou un garage partenaire.`,
           },
           {
-            role: "user",
-            content: message
-          }
+            role: 'user',
+            content: message,
+          },
         ],
         temperature: 0.7,
-        max_tokens: 600,
       }),
     });
 
     const data = await response.json();
 
-    if (data.error) {
-      return res.status(500).json({ error: data.error.message || "Erreur OpenAI" });
+    if (response.ok) {
+      const botReply = data.choices[0]?.message?.content || 'Je n’ai pas bien compris, peux-tu reformuler ?';
+      return res.status(200).json({ message: botReply });
+    } else {
+      console.error('Erreur OpenAI :', data);
+      return res.status(500).json({ message: 'Erreur lors de la génération de la réponse' });
     }
-
-    const reply = data.choices?.[0]?.message?.content || "Pas de réponse";
-
-    return res.status(200).json({ reply });
-
   } catch (error) {
-    console.error("Erreur API OpenAI :", error);
-    return res.status(500).json({ error: "Erreur serveur" });
+    console.error('Erreur serveur :', error);
+    return res.status(500).json({ message: 'Erreur interne du serveur' });
   }
 }
