@@ -55,59 +55,64 @@
     <input type="text" id="user-input" placeholder="Décrivez votre problème moteur..." />
     <button id="send-btn">Envoyer</button>
   </div>
-  <script>
-    const chat = document.getElementById('chat');
-    const input = document.getElementById('user-input');
-    const sendBtn = document.getElementById('send-btn');
-    let messages = [
-      {
-        role: 'system',
-        content: "Tu es un expert automobile Re-FAP. Ton rôle est d’aider l’utilisateur à identifier la cause probable de sa panne moteur, avec précision et pédagogie. Tu raisonnes comme un mécano expérimenté qui parle vrai, propose des hypothèses réalistes, pose des questions ciblées si besoin, et oriente vers une solution économique (diagnostic, nettoyage, garage partenaire Re-FAP, etc.)."
-      }
-    ];
+ <script>
+  const chat = document.getElementById('chat');
+  const input = document.getElementById('user-input');
+  const sendBtn = document.getElementById('send-btn');
 
-    function addMessage(text, className) {
-      const div = document.createElement('div');
-      div.className = `message ${className}`;
-      div.textContent = text;
-      chat.appendChild(div);
-      chat.scrollTop = chat.scrollHeight;
+  // Historique de la conversation
+  const messages = [
+    {
+      role: 'system',
+      content: "Tu es un expert automobile Re-FAP. Ton rôle est d'aider l'utilisateur à comprendre l'origine probable de sa panne moteur et de l’orienter vers la meilleure solution économique et fiable, en restant clair et professionnel."
     }
+  ];
 
-    async function sendMessage() {
-      const userText = input.value.trim();
-      if (!userText) return;
+  function addMessage(text, className) {
+    const div = document.createElement('div');
+    div.className = `message ${className}`;
+    div.textContent = text;
+    chat.appendChild(div);
+    chat.scrollTop = chat.scrollHeight;
+  }
 
-      addMessage(userText, 'user');
-      messages.push({ role: 'user', content: userText });
-      input.value = '';
-      addMessage('🔧 Analyse en cours...', 'bot');
+  async function sendMessage() {
+    const userText = input.value.trim();
+    if (!userText) return;
 
-      try {
-        const response = await fetch('/api/message', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages })
-        });
+    addMessage(userText, 'user');
+    messages.push({ role: 'user', content: userText });
+    input.value = '';
 
-        const data = await response.json();
-        const bots = document.querySelectorAll('.bot');
-        bots[bots.length - 1].textContent = data.reply;
+    const botLoading = document.createElement('div');
+    botLoading.className = 'message bot';
+    botLoading.textContent = '🔧 Analyse en cours...';
+    chat.appendChild(botLoading);
+    chat.scrollTop = chat.scrollHeight;
 
-        // Ajoute réponse à l’historique pour la suite de la conversation
-        messages.push({ role: 'assistant', content: data.reply });
+    try {
+      const response = await fetch('/api/message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages })
+      });
 
-      } catch (err) {
-        const bots = document.querySelectorAll('.bot');
-        bots[bots.length - 1].textContent = "❌ Erreur serveur. Réessaie plus tard.";
-      }
+      const data = await response.json();
+      const botReply = data.message || "❌ Pas de réponse. Réessaie plus tard.";
+
+      botLoading.textContent = botReply;
+      messages.push({ role: 'assistant', content: botReply });
+
+    } catch (err) {
+      botLoading.textContent = "❌ Erreur de réponse. Réessaie plus tard.";
     }
+  }
 
-    sendBtn.addEventListener('click', sendMessage);
-    input.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') sendMessage();
-    });
-  </script>
+  sendBtn.addEventListener('click', sendMessage);
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') sendMessage();
+  });
+</script>
 </body>
 </html>
 
