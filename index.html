@@ -49,7 +49,7 @@
       });
       const data = await response.json();
       const bots = document.querySelectorAll('.bot');
-      bots[bots.length - 1].textContent = data.reply;
+      bots[bots.length - 1].textContent = data.message;
     } catch (err) {
       const bots = document.querySelectorAll('.bot');
       bots[bots.length - 1].textContent = "❌ Erreur de réponse. Réessaie plus tard.";
