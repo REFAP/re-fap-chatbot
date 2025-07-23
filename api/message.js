@@ -1,32 +1,41 @@
-import { OpenAI } from 'openai';
+import OpenAI from 'openai';
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
-export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ message: 'Méthode non autorisée' });
-  }
-
-  const { messages } = req.body;
-
-  if (!messages || !Array.isArray(messages)) {
-    return res.status(400).json({ message: 'Requête invalide' });
-  }
-
+export async function POST(req) {
   try {
-    const chatResponse = await openai.chat.completions.create({
-      model: 'gpt-4',
-      messages,
+    const { messages } = await req.json();
+
+    if (!messages || !Array.isArray(messages)) {
+      return new Response(JSON.stringify({ error: "Requête invalide" }), {
+        status: 400,
+      });
+    }
+
+    const chatCompletion = await openai.chat.completions.create({
+      model: "gpt-4o", // ou "gpt-3.5-turbo" si tu veux économiser
+      messages: [
+        {
+          role: "system",
+          content:
+            "Tu es un expert automobile expérimenté. Tu parles comme un mécano : direct, pro, rassurant. Ton objectif est de poser des hypothèses de panne claires à partir des symptômes décrits, et d’orienter vers un diagnostic fiable, de préférence dans un garage partenaire Re-FAP ou via une solution économique.",
+        },
+        ...messages,
+      ],
       temperature: 0.7,
-      max_tokens: 700
     });
 
-    const reply = chatResponse.choices[0].message.content;
-    res.status(200).json({ message: reply });
+    const result = chatCompletion.choices[0]?.message?.content;
+
+    return new Response(JSON.stringify({ message: result }), {
+      status: 200,
+    });
   } catch (error) {
-    console.error('Erreur OpenAI :', error);
-    res.status(500).json({ message: "Erreur lors de la génération de la réponse" });
+    console.error("Erreur OpenAI:", error);
+    return new Response(JSON.stringify({ error: "Erreur serveur GPT." }), {
+      status: 500,
+    });
   }
 }
