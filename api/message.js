@@ -1,58 +1,52 @@
-import { OpenAI } from 'openai';
+// Fichier : /api/message.js
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ message: 'Méthode non autorisée' });
+  }
 
-export async function POST(req) {
+  const { message } = req.body;
+
+  if (!message) {
+    return res.status(400).json({ message: 'Aucun message fourni' });
+  }
+
   try {
-    const { messages } = await req.json();
-
-    if (!messages || !Array.isArray(messages)) {
-      return new Response(
-        JSON.stringify({ error: 'Requête invalide : "messages" est requis.' }),
-        {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' },
-        }
-      );
-    }
-
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4',
-      messages: [
-        {
-          role: 'system',
-          content:
-            "Tu es un expert automobile spécialisé en diagnostic moteur. Tu poses des questions précises pour comprendre la panne. Tu réponds toujours en français dans un style clair, structuré, avec des emojis et des explications professionnelles mais accessibles.",
-        },
-        ...messages,
-      ],
-      temperature: 0.7,
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4',
+        messages: [
+          {
+            role: 'system',
+            content:
+              "Tu es un expert automobile Re-FAP. Tu poses des questions précises, tu identifies les pannes probables, tu expliques simplement. Tu parles comme un mécano expérimenté, direct, pro et bienveillant."
+          },
+          {
+            role: 'user',
+            content: message,
+          },
+        ],
+        temperature: 0.5,
+      }),
     });
 
-    const reply = response.choices?.[0]?.message?.content;
+    const data = await response.json();
 
-    return new Response(
-      JSON.stringify({ reply }),
-      {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+    if (response.ok) {
+      const botReply = data.choices[0]?.message?.content || '❌ Réponse vide. Reformule ton souci ?';
+      return res.status(200).json({ message: botReply });
+    } else {
+      return res.status(500).json({ message: '❌ Erreur OpenAI', data });
+    }
   } catch (error) {
-    console.error('Erreur dans /api/message :', error);
-
-    return new Response(
-      JSON.stringify({
-        error: 'Erreur serveur GPT',
-        details: error.message || 'Erreur inconnue',
-      }),
-      {
-        status: 500,
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
+    console.error('Erreur serveur :', error);
+    return res.status(500).json({ message: '❌ Erreur serveur', error: error.toString() });
   }
 }
+
 
