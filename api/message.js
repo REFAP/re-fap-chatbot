@@ -46,7 +46,8 @@ export default async function handler(req, res) {
   } catch (error) {
     console.error('Erreur serveur :', error);
     return res.status(500).json({ message: '❌ Erreur serveur', error: error.toString() });
-    // Trigger redeploy
+    // Trigger redeploy 
+    
   }
 }
 
